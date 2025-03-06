@@ -5,5 +5,7 @@
 azure-functions>=1.12.0
 fastapi
 openai
-semantic-kernel
+semantic-kernel==1.17.1
 azure-search-documents==11.6.0b4
+azure-ai-ml
+azure.ai.projects
