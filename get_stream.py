@@ -61,7 +61,7 @@ async def main():
             exit(0)
 
         # Point this to your actual SSE endpoint
-        #url = "https://shadow-fastapi-sk-rgrhhk5mtlr7i-function-app.azurewebsites.net/shadow-sk-no-stream"
+        #url = "https://shadow-fastapi-6azng7abetzb2-function-app.azurewebsites.net/shadow-sk-no-stream"
         url = "http://localhost:7071/shadow-sk-no-stream"
 
         # Construct request payload
