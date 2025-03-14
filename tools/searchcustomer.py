@@ -71,7 +71,7 @@ class SearchCustomer:
                 search_text=query,  # set this to engage a Hybrid Search
                 vector_queries=[vector_query],
                 select=["category", "sourcefile", "content"],
-                top=1,
+                top=3,
             )
             for doc in r:
                 results.append(

@@ -78,19 +78,8 @@ async def get_agent() -> Optional[OpenAIAssistantAgent]:
 
     try:
         # (4) Retrieve the agent
-        # Create the client using Azure OpenAI resources and configuration
-        #client, model = OpenAIAssistantAgent.setup_resources()
-        
-        # Retrieve the assistant definition from the server based on the assistant ID
-        #asst_definition = await client.beta.assistants.retrieve(ASSISTANT_ID, model)
-        
-        # Create the AzureAssistantAgent instance using the client and the assistant definition
-        #agent = OpenAIAssistantAgent(
-        #    client=client,
-        #    definition=asst_definition,
-        #)
         agent = await OpenAIAssistantAgent.retrieve(
-            id=ASSISTANT_ID, kernel=kernel, ai_model_id="gpt-4.5-preview"
+            id=ASSISTANT_ID, kernel=kernel, ai_model_id="gpt-4o"
         )
         if agent is None:
             logger.error("Failed to retrieve the assistant agent. Please check the assistant ID.")
