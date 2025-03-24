@@ -43,7 +43,7 @@ async def consume_sse(url: str, payload: str):
                             for line in content:
                                 print(line, end="", flush=True)
                                 # Adjust sleep time to control the "typing" speed
-                                # await asyncio.sleep(0.01)
+                                #await asyncio.sleep(0.01)
                     except json.JSONDecodeError:
                         print("Could not parse JSON:", line)
 
@@ -61,8 +61,8 @@ async def main():
             exit(0)
 
         # Point this to your actual SSE endpoint
-        #url = "https://shadow-fastapi-6azng7abetzb2-function-app.azurewebsites.net/shadow-sk-no-stream"
-        url = "http://localhost:7071/shadow-sk-no-stream"
+        url = "https://shadow-fastapi-6azng7abetzb2-function-app.azurewebsites.net/shadow-sk-no-stream"
+        #url = "http://localhost:7071/shadow-sk-no-stream"
 
         # Construct request payload
         payload = {
