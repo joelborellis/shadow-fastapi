@@ -40,7 +40,8 @@ logger.setLevel(logging.INFO)
 # Define request body model
 class ShadowRequest(BaseModel):
     query: str
-    thread_id: str
+    threadId: str
+    additional_instructions: Optional[str] = None
 
 
 # Instantiate search clients as singletons (if they are thread-safe or handle concurrency internally)
@@ -108,6 +109,9 @@ async def shadow_sk(request: ShadowRequest):
     message_user = ChatMessageContent(role=AuthorRole.USER, content=request.query)
     # Add the user message to the agent
     await agent.add_chat_message(thread_id=current_thread_id, message=message_user)
+    
+    # get any additional instructions passed for the assistant
+    additional_instructions = request.additional_instructions or None
 
     async def event_stream():
         """
@@ -116,7 +120,7 @@ async def shadow_sk(request: ShadowRequest):
         try:
             # Open a file in write mode
             # with open("stream_output.txt", "w") as file:
-                async for partial_content in agent.invoke_stream(thread_id=current_thread_id):
+                async for partial_content in agent.invoke_stream(thread_id=current_thread_id, additional_instructions=additional_instructions):
                     
                     # Skip empty content
                     if not partial_content.content.strip():
@@ -125,7 +129,7 @@ async def shadow_sk(request: ShadowRequest):
                     # Prepare the data for streaming and saving
                     data = json.dumps({
                         "data": partial_content.content,
-                        "thread_id": current_thread_id
+                        "threadId": current_thread_id
                     })
                     # Write to file
                     # file.write(f"{data}\n")
@@ -155,31 +159,34 @@ async def shadow_sk_no_stream(request: ShadowRequest):
     agent = await get_agent()
 
     # Retrieve or create a thread ID
-    if request.thread_id:
-        current_thread_id = request.thread_id
+    if request.threadId:
+        current_thread_id = request.threadId
     else:
         current_thread_id = await agent.create_thread()
 
     # Create the user message content with the request.query
     message_user = ChatMessageContent(role=AuthorRole.USER, content=request.query)
     await agent.add_chat_message(thread_id=current_thread_id, message=message_user)
+    
+    # get any additional instructions passed for the assistant
+    additional_instructions = request.additional_instructions or None
 
     try:
         # Collect all messages from the async iterable
         full_response = []
-        async for message in agent.invoke(thread_id=current_thread_id):
+        async for message in agent.invoke(thread_id=current_thread_id, additional_instructions=additional_instructions):
             if message.content.strip():  # Skip empty content
                 full_response.append(message.content)
 
         if not full_response:
-            return {"error": "Empty response from the agent.", "thread_id": current_thread_id}
+            return {"error": "Empty response from the agent.", "threadId": current_thread_id}
 
         # Combine the collected messages into a single string
         combined_response = " ".join(full_response)
 
         json_response = {
             "data": combined_response,
-            "thread_id": current_thread_id
+            "threadId": current_thread_id
         }
         # Return json response
         return JSONResponse(json_response, status_code=200)

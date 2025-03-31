@@ -52,7 +52,7 @@ async def consume_sse(url: str, payload: str):
 
 async def main():
 
-    thread_id = ""
+    threadId = ""
 
     while True:
         # Get user query
@@ -61,13 +61,13 @@ async def main():
             exit(0)
 
         # Point this to your actual SSE endpoint
-        url = "https://shadow-endpoint-k33pqykzy3hqo-function-app.azurewebsites.net/shadow-sk-no-stream"
-        #url = "http://localhost:7071/shadow-sk-no-stream"
+        #url = "https://shadow-endpoint-k33pqykzy3hqo-function-app.azurewebsites.net/shadow-sk-no-stream"
+        url = "http://localhost:7071/shadow-sk-no-stream"
 
         # Construct request payload
         payload = {
             "query": query,
-            "thread_id": thread_id,
+            "threadId": threadId,
         }  # thread_id will be empty first time
         # call consume what will create the streaming like output
         thread_id = await consume_sse(url, payload)
