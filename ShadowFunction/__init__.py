@@ -42,6 +42,7 @@ class ShadowRequest(BaseModel):
     query: str
     threadId: str
     additional_instructions: Optional[str] = None
+    user_company: Optional[str] = None
 
 
 # Instantiate search clients as singletons (if they are thread-safe or handle concurrency internally)
@@ -98,9 +99,12 @@ async def shadow_sk(request: ShadowRequest):
     """
     agent = await get_agent()
 
-    if request.thread_id:
+    # get any additional instructions passed for the assistant
+    user_company = request.user_company or None
+
+    if request.threadId:
         # thread_id is not empty; retrieve it
-        current_thread_id = request.thread_id
+        current_thread_id = request.threadId
     else:
         # thread_id is empty; create a new one
         current_thread_id = await agent.create_thread()
@@ -157,6 +161,14 @@ async def shadow_sk_no_stream(request: ShadowRequest):
     Endpoint that receives a query, passes it to the agent, and returns a single JSON response.
     """
     agent = await get_agent()
+
+    print(f"query:  {request.query}\n")
+    print(f"threadId:  {request.threadId}\n")
+    print(f"additional_instructions: {request.additional_instructions}\n")
+    print(f"user_company:  {request.user_company}\n")
+
+    # get any additional instructions passed for the assistant
+    user_company = request.user_company or None
 
     # Retrieve or create a thread ID
     if request.threadId:

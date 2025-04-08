@@ -31,7 +31,7 @@ async def consume_sse(url: str, payload: str):
 
                         json_data = json.loads(line)
                         content = json_data.get("data", "")
-                        thread_id = json_data.get("thread_id", "")
+                        thread_id = json_data.get("threadId", "")
 
                         # Print thread_id only once
                         if thread_id and not thread_id_printed:
@@ -68,9 +68,10 @@ async def main():
         payload = {
             "query": query,
             "threadId": threadId,
+            "additional_instructions": "Output your response in markdown format and sound like a pirate",
         }  # thread_id will be empty first time
         # call consume what will create the streaming like output
-        thread_id = await consume_sse(url, payload)
+        threadId = await consume_sse(url, payload)
 
 
 if __name__ == "__main__":
