@@ -68,7 +68,10 @@ async def main():
         payload = {
             "query": query,
             "threadId": threadId,
-            "additional_instructions": "Output your response in markdown format and sound like a pirate",
+            "additional_instructions": "Output your response in html format",
+            "user_company": "MultiPlan",
+            "target_account": "NeoGenomics",
+            "demand_stage": "Interest",
         }  # thread_id will be empty first time
         # call consume what will create the streaming like output
         threadId = await consume_sse(url, payload)

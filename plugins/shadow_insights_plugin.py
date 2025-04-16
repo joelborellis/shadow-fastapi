@@ -5,7 +5,6 @@ from tools.searchcustomer import SearchCustomer
 
 
 class ShadowInsightsPlugin:
-    """Plugin class that accepts a PromptTemplateConfig for advanced configuration."""
 
     def __init__(
         self, search_shadow_client: SearchShadow, search_customer_client: SearchCustomer
@@ -19,7 +18,7 @@ class ShadowInsightsPlugin:
 
     @kernel_function(
         name="get_sales_docs",
-        description="Given a user query determine if it is a question related to a sales pursuit and search the sales index.",
+        description="Given a user query determine if the users request involves sales strategy or methodology.",
     )
     def get_sales_docs(
         self, query: Annotated[str, "The query from the user."]
@@ -41,10 +40,10 @@ class ShadowInsightsPlugin:
 
     @kernel_function(
         name="get_customer_docs",
-        description="Given a user query determine if a target pursuit account company name is provided. Use the query and the target pursuit account company name to search the pursuit index.",
+        description="Given a user query determine the users request involves a target account",
     )
     def get_customer_docs(
-        self, query: Annotated[str, "The query and the target pursuit account company name provided by the user."]
+        self, query: Annotated[str, "The query and the target account company name provided by the user."]
     ) -> Annotated[str, "Returns documents from the pursuit index."]:
         try:
             # Ensure query is valid
@@ -60,3 +59,25 @@ class ShadowInsightsPlugin:
             return f"Input error: {ve}"
         except Exception as e:
             return f"An error occurred while retrieving documents from the pursuit index: {e}"
+        
+    @kernel_function(
+        name="get_user_docs",
+        description="Given a user query determine if the users request involves the company the user represents.",
+    )
+    def get_user_docs(
+        self, query: Annotated[str, "The query and the name of the company the user represents."]
+    ) -> Annotated[str, "Returns documents from the pursuit index."]:
+        try:
+            # Ensure query is valid
+            if not isinstance(query, str) or not query.strip():
+                raise ValueError("The query must be a non-empty string.")
+
+            # Perform the search
+            docs = self.search_customer_client.search_hybrid(query)
+            if not docs:
+                return "No relevant documents found in the user index."
+            return docs
+        except ValueError as ve:
+            return f"Input error: {ve}"
+        except Exception as e:
+            return f"An error occurred while retrieving documents from the user index: {e}"

@@ -43,6 +43,8 @@ class ShadowRequest(BaseModel):
     threadId: str
     additional_instructions: Optional[str] = None
     user_company: Optional[str] = None
+    target_account: Optional[str] = None
+    demand_stage: Optional[str] = None
 
 
 # Instantiate search clients as singletons (if they are thread-safe or handle concurrency internally)
@@ -99,18 +101,31 @@ async def shadow_sk(request: ShadowRequest):
     """
     agent = await get_agent()
 
-    # get any additional instructions passed for the assistant
-    user_company = request.user_company or None
+    # Extract fields directly
+    query = request.query  # required field, always present
+    threadId = request.threadId  # required field, always present
+    user_company = request.user_company  # optional
+    target_account = request.target_account  # optional
+    demand_stage = request.demand_stage # optional
 
-    if request.threadId:
-        # thread_id is not empty; retrieve it
-        current_thread_id = request.threadId
+    # Build structured parameters
+    params = {
+        "target_account": target_account,
+        "user_company": user_company,
+        "demand_stage": demand_stage
+    }
+
+    # Combine query and parameters into a single string
+    combined_query = f"{query} - {params}"
+
+    # Retrieve or create a thread ID
+    if threadId:
+        current_thread_id = threadId
     else:
-        # thread_id is empty; create a new one
-        current_thread_id = await agent.create_thread()
+        current_thread_id = await agent.create_thread()  # create new threadId and set as current
 
     # Create the user message content with the request.query
-    message_user = ChatMessageContent(role=AuthorRole.USER, content=request.query)
+    message_user = ChatMessageContent(role=AuthorRole.USER, content=combined_query)
     # Add the user message to the agent
     await agent.add_chat_message(thread_id=current_thread_id, message=message_user)
     
@@ -162,22 +177,33 @@ async def shadow_sk_no_stream(request: ShadowRequest):
     """
     agent = await get_agent()
 
-    print(f"query:  {request.query}\n")
-    print(f"threadId:  {request.threadId}\n")
-    print(f"additional_instructions: {request.additional_instructions}\n")
-    print(f"user_company:  {request.user_company}\n")
+    # Assume `request` is already an instance of ShadowRequest
 
-    # get any additional instructions passed for the assistant
-    user_company = request.user_company or None
+    # Extract fields directly
+    query = request.query  # required field, always present
+    threadId = request.threadId  # required field, always present
+    user_company = request.user_company  # optional
+    target_account = request.target_account  # optional
+    demand_stage = request.demand_stage # optional
+
+    # Build structured parameters
+    params = {
+        "target_account": target_account,
+        "user_company": user_company,
+        "demand_stage": demand_stage
+    }
+
+    # Combine query and parameters into a single string
+    combined_query = f"{query} - {params}"
 
     # Retrieve or create a thread ID
-    if request.threadId:
-        current_thread_id = request.threadId
+    if threadId:
+        current_thread_id = threadId
     else:
-        current_thread_id = await agent.create_thread()
+        current_thread_id = await agent.create_thread()  # create new threadId and set as current
 
     # Create the user message content with the request.query
-    message_user = ChatMessageContent(role=AuthorRole.USER, content=request.query)
+    message_user = ChatMessageContent(role=AuthorRole.USER, content=combined_query)
     await agent.add_chat_message(thread_id=current_thread_id, message=message_user)
     
     # get any additional instructions passed for the assistant
