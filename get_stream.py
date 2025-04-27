@@ -68,9 +68,9 @@ async def main():
         payload = {
             "query": query,
             "threadId": threadId,
-            "additional_instructions": "Output your response in html format",
+            "additional_instructions": "Output your response in markdown format",
             "user_company": "MultiPlan",
-            "target_account": "NeoGenomics",
+            "target_account": "Labcorp",
             "demand_stage": "Interest",
         }  # thread_id will be empty first time
         # call consume what will create the streaming like output

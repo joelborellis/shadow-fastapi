@@ -63,19 +63,20 @@ class SearchCustomer:
             vector_query = VectorizedQuery(
                 vector=self.get_embedding(query, self.model),
                 k_nearest_neighbors=5,
-                fields="contentVector",
+                fields="text_vector",
             )
             results = []
 
             r = self.sc.search(
                 search_text=query,  # set this to engage a Hybrid Search
                 vector_queries=[vector_query],
-                select=["category", "sourcefile", "content"],
+                #select=["category", "sourcefile", "content"],
+                select=["title", "chunk"],
                 top=3,
             )
             for doc in r:
                 results.append(
-                    doc["category"] + doc["sourcefile"] + clean_text(doc["content"])
+                    doc["title"] + ":  " +  doc["chunk"]
                 )
             return "\n".join(results)
         except Exception as e:

@@ -40,10 +40,10 @@ class ShadowInsightsPlugin:
 
     @kernel_function(
         name="get_customer_docs",
-        description="Given a user query determine the users request involves a target account",
+        description="Given a user query determine the users request involves a target account [target_account]",
     )
     def get_customer_docs(
-        self, query: Annotated[str, "The query and the target account company name provided by the user."]
+        self, query: Annotated[str, "The query and the target account [target_account] name provided by the user."]
     ) -> Annotated[str, "Returns documents from the pursuit index."]:
         try:
             # Ensure query is valid
@@ -62,10 +62,10 @@ class ShadowInsightsPlugin:
         
     @kernel_function(
         name="get_user_docs",
-        description="Given a user query determine if the users request involves the company the user represents.",
+        description="Given a user query determine if the users request involves the company the user represents [user_company].",
     )
     def get_user_docs(
-        self, query: Annotated[str, "The query and the name of the company the user represents."]
+        self, query: Annotated[str, "The query and the name of the company the user represents [user_company]."]
     ) -> Annotated[str, "Returns documents from the pursuit index."]:
         try:
             # Ensure query is valid
