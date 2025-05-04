@@ -72,12 +72,12 @@ class SearchCustomer:
                 vector_queries=[vector_query],
                 #select=["category", "sourcefile", "content"],
                 select=["title", "chunk"],
-                top=3,
+                top=10,
             )
-            for doc in r:
-                results.append(
-                    doc["title"] + ":  " +  doc["chunk"]
-                )
+            if not r:
+                return "No results found."
+            results = [f"{doc['title']}:  {doc['chunk']}" for doc in r]
+
             return "\n".join(results)
         except Exception as e:
             raise RuntimeError(f"Error performing hybrid search: {e}")

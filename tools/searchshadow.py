@@ -75,10 +75,10 @@ class SearchShadow:
                 select=["category", "sourcefile", "content"],
                 top=1,
             )
-            for doc in r:
-                results.append(
-                    doc["category"] + doc["sourcefile"] + clean_text(doc["content"])
-                )
+            if not r:
+                return "No results found."
+            results = [f"{doc['category']}{doc['sourcefile']}{clean_text(doc['content'])}" for doc in r]
+            
             return "\n".join(results)
         except Exception as e:
             raise RuntimeError(f"Error performing hybrid search: {e}")

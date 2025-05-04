@@ -130,7 +130,7 @@ async def shadow_sk(request: ShadowRequest):
     await agent.add_chat_message(thread_id=current_thread_id, message=message_user)
     
     # get any additional instructions passed for the assistant
-    additional_instructions = request.additional_instructions or None
+    additional_instructions = f"<additional_instructions>{request.additional_instructions}</additional_instructions>" or None
 
     async def event_stream():
         """
@@ -207,7 +207,7 @@ async def shadow_sk_no_stream(request: ShadowRequest):
     await agent.add_chat_message(thread_id=current_thread_id, message=message_user)
     
     # get any additional instructions passed for the assistant
-    additional_instructions = request.additional_instructions or None
+    additional_instructions = f"<additional_instructions>{request.additional_instructions}</additional_instructions>" or None
 
     try:
         # Collect all messages from the async iterable
