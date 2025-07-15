@@ -7,9 +7,11 @@ from pydantic import BaseModel
 import json
 import os
 import logging
+import asyncio
 
 from tools.searchshadow import SearchShadow
 from tools.searchcustomer import SearchCustomer
+from tools.searchuser import SearchUser
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.agents.open_ai import OpenAIAssistantAgent
@@ -50,6 +52,7 @@ class ShadowRequest(BaseModel):
 # Instantiate search clients as singletons (if they are thread-safe or handle concurrency internally)
 search_shadow_client = SearchShadow()
 search_customer_client = SearchCustomer()
+search_user_client = SearchUser()
 
 ASSISTANT_ID = os.environ.get("ASSISTANT_ID")
 
@@ -68,7 +71,7 @@ async def get_agent() -> Optional[OpenAIAssistantAgent]:
     try:
         # (2) Add plugin
         # Instantiate ShadowInsightsPlugin and pass the search clients
-        shadow_plugin = ShadowInsightsPlugin(search_shadow_client, search_customer_client)
+        shadow_plugin = ShadowInsightsPlugin(search_shadow_client, search_customer_client, search_user_client)
     except Exception as e:
         logger.error("Failed to instantiate ShadowInsightsPlugin: %s", e)
         return None
@@ -113,9 +116,7 @@ async def shadow_sk(request: ShadowRequest):
         "target_account": target_account,
         "user_company": user_company,
         "demand_stage": demand_stage
-    }
-
-    # Combine query and parameters into a single string
+    }    # Combine query and parameters into a single string
     combined_query = f"{query} - {params}"
 
     # Retrieve or create a thread ID
@@ -128,33 +129,81 @@ async def shadow_sk(request: ShadowRequest):
     message_user = ChatMessageContent(role=AuthorRole.USER, content=combined_query)
     # Add the user message to the agent
     await agent.add_chat_message(thread_id=current_thread_id, message=message_user)
-    
-    # get any additional instructions passed for the assistant
-    additional_instructions = f"<additional_instructions>{request.additional_instructions}</additional_instructions>" or None
+      # get any additional instructions passed for the assistant
+    additional_instructions = f"<additional_instructions>{request.additional_instructions}</additional_instructions>" if request.additional_instructions else None
 
     async def event_stream():
         """
-        Asynchronously stream responses back to the caller in JSON lines.
+        Asynchronously stream responses back to the caller in JSON lines with granular events.
         """
         try:
-            # Open a file in write mode
-            # with open("stream_output.txt", "w") as file:
-                async for partial_content in agent.invoke_stream(thread_id=current_thread_id, additional_instructions=additional_instructions):
-                    
-                    # Skip empty content
-                    if not partial_content.content.strip():
-                        continue
-                    
-                    # Prepare the data for streaming and saving
-                    data = json.dumps({
-                        "data": partial_content.content,
-                        "threadId": current_thread_id
-                    })
-                    # Write to file
-                    # file.write(f"{data}\n")
+            # Stage 1: Initialize connection
+            init_data = json.dumps({
+                "event": "connection_established",
+                "data": "Connection established, preparing to process query...",
+                "threadId": current_thread_id,
+                "stage": "init"            })
+            yield f"data: {init_data}\n\n"
 
-                    # Stream to the caller
-                    yield f"data: {data}\n\n"
+            # Stage 2: Processing query (add small delay to make it realistic)
+            await asyncio.sleep(0.1)  # Small delay to simulate processing
+            processing_data = json.dumps({
+                "event": "query_processing",
+                "data": "Processing query and preparing LLM request...",
+                "threadId": current_thread_id,
+                "stage": "processing"            })
+            yield f"data: {processing_data}\n\n"
+
+            # Stage 3: Start streaming - this is where the real work begins
+            # Stage 4: Stream LLM responses
+            first_chunk = True
+            llm_call_initiated = False
+            async for partial_content in agent.invoke_stream(thread_id=current_thread_id, additional_instructions=additional_instructions):
+                
+                # Send LLM call initiated event only when we actually start streaming
+                if not llm_call_initiated:
+                    llm_init_data = json.dumps({
+                        "event": "llm_call_initiated",
+                        "data": "Initiating LLM call with invoke_stream...",
+                        "threadId": current_thread_id,
+                        "stage": "llm_init"
+                    })
+                    yield f"data: {llm_init_data}\n\n"
+                    llm_call_initiated = True
+                
+                # Skip empty content
+                if not partial_content.content.strip():
+                    continue
+                  # Send first chunk event
+                if first_chunk:
+                    first_chunk_data = json.dumps({
+                        "event": "first_chunk_received",
+                        "data": "First response chunk received, starting stream...",
+                        "threadId": current_thread_id,
+                        "stage": "streaming"
+                    })
+                    yield f"data: {first_chunk_data}\n\n"
+                    first_chunk = False
+                
+                # Prepare the data for streaming
+                data = json.dumps({
+                    "event": "content_chunk",
+                    "data": partial_content.content,
+                    "threadId": current_thread_id,
+                    "stage": "streaming"
+                })
+
+                # Stream to the caller
+                yield f"data: {data}\n\n"
+
+            # Stage 5: Stream completion
+            completion_data = json.dumps({
+                "event": "stream_completed",
+                "data": "Stream processing completed successfully.",
+                "threadId": current_thread_id,
+                "stage": "completed"
+            })
+            yield f"data: {completion_data}\n\n"
 
         except HTTPException as exc:
             # SSE error payload

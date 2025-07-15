@@ -2,12 +2,13 @@ from typing import Annotated
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 from tools.searchshadow import SearchShadow
 from tools.searchcustomer import SearchCustomer
+from tools.searchuser import SearchUser
 
 
 class ShadowInsightsPlugin:
 
     def __init__(
-        self, search_shadow_client: SearchShadow, search_customer_client: SearchCustomer
+        self, search_shadow_client: SearchShadow, search_customer_client: SearchCustomer, search_user_client: SearchUser
     ):
         """
         :param search_shadow_client: A SearchShadow client used for shadow index searches.
@@ -15,6 +16,7 @@ class ShadowInsightsPlugin:
         """
         self.search_shadow_client = search_shadow_client
         self.search_customer_client = search_customer_client
+        self.search_user_client = search_user_client
 
     @kernel_function(
         name="get_sales_docs",
@@ -73,7 +75,7 @@ class ShadowInsightsPlugin:
                 raise ValueError("The query must be a non-empty string.")
 
             # Perform the search
-            docs = self.search_customer_client.search_hybrid(query)
+            docs = self.search_user_client.search_hybrid(query)
             if not docs:
                 return "No relevant documents found in the user index."
             return docs
