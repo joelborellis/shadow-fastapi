@@ -63,7 +63,7 @@ class SearchUser:
             vector_query = VectorizedQuery(
                 vector=self.get_embedding(query, self.model),
                 k_nearest_neighbors=5,
-                fields="text_vector",
+                fields="content_embedding",
             )
             results = []
 
@@ -71,12 +71,12 @@ class SearchUser:
                 search_text=query,  # set this to engage a Hybrid Search
                 vector_queries=[vector_query],
                 #select=["category", "sourcefile", "content"],
-                select=["title", "chunk"],
+                select=["document_title", "content_text"],
                 top=10,
             )
             if not r:
                 return "No results found."
-            results = [f"{doc['title']}:  {doc['chunk']}" for doc in r]
+            results = [f"{doc['document_title']}:  {doc['content_text']}" for doc in r]
 
             return "\n".join(results)
         except Exception as e:

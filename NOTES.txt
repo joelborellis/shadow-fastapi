@@ -1,0 +1,6 @@
+curl -N -X POST http://localhost:7071/shadow-sk -H "Content-Type: application/json" -d '{"query": "Hello Shadow", "threadId": "", "additional_instructions": "Output your response in markdown format", "user_company": "North Highland", "target_account": "Allina", "demand_stage": "Interest"}'
+
+curl -N -X POST https://shadow-endpoint-k33pqykzy3hqo-function-app.azurewebsites.net/shadow-sk -H "Content-Type: application/json" -d '{"query": "Hello Shadow", "threadId": "", "additional_instructions": "Output your response in markdown format", "user_company": "North Highland", "target_account": "Allina", "demand_stage": "Interest"}'
+
+
+func azure functionapp publish shadow-endpoint-k33pqykzy3hqo-function-app
