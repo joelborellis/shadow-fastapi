@@ -14,8 +14,13 @@ from tools.searchcustomer import SearchCustomer
 from tools.searchuser import SearchUser
 
 from semantic_kernel.kernel import Kernel
-from semantic_kernel.agents.open_ai import OpenAIAssistantAgent
-from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.connectors.ai.open_ai import AzureOpenAISettings, OpenAISettings
+from semantic_kernel.agents import OpenAIAssistantAgent, AssistantAgentThread
+from semantic_kernel.contents.chat_message_content import (
+    ChatMessageContent,
+    FunctionCallContent,
+    FunctionResultContent,
+)
 from semantic_kernel.contents.utils.author_role import AuthorRole
 
 # Import the modified plugin class
@@ -57,19 +62,28 @@ search_user_client = SearchUser()
 ASSISTANT_ID = os.environ.get("ASSISTANT_ID")
 
 
+# This callback function will be called for each intermediate message,
+# which will allow one to handle FunctionCallContent and FunctionResultContent.
+# If the callback is not provided, the agent will return the final response
+# with no intermediate tool call steps.
+async def handle_streaming_intermediate_steps(message: ChatMessageContent) -> None:
+    for item in message.items or []:
+        # Force a small delay to ensure the init event is sent before processing
+        await asyncio.sleep(0.05)
+        if isinstance(item, FunctionResultContent):
+            print(f"Function Result:> {item.result} for function: {item.name}")
+        elif isinstance(item, FunctionCallContent):
+            print(f"Function Call:> {item.name} with arguments: {item.arguments}")
+        else:
+            print(f"{item}")
+
+
 async def get_agent() -> Optional[OpenAIAssistantAgent]:
     """
     Setup the Assistant with error handling.
     """
     try:
-        # (1) Create the instance of the Kernel
-        kernel = Kernel()
-    except Exception as e:
-        logger.error("Failed to initialize the kernel: %s", e)
-        return None
-
-    try:
-        # (2) Add plugin
+        # (2) Create plugin
         # Instantiate ShadowInsightsPlugin and pass the search clients
         shadow_plugin = ShadowInsightsPlugin(
             search_shadow_client, search_customer_client, search_user_client
@@ -79,17 +93,21 @@ async def get_agent() -> Optional[OpenAIAssistantAgent]:
         return None
 
     try:
-        # (3) Register plugin with the Kernel
-        kernel.add_plugin(shadow_plugin, plugin_name="shadowRetrievalPlugin")
-    except Exception as e:
-        logger.error("Failed to register plugin with the kernel: %s", e)
-        return None
+        # Create the client using Azure OpenAI resources and configuration
+        client = OpenAIAssistantAgent.create_client(ai_model_id="gpt-4o")
 
-    try:
-        # (4) Retrieve the agent
-        agent = await OpenAIAssistantAgent.retrieve(
-            id=ASSISTANT_ID, kernel=kernel, ai_model_id="gpt-4.1-mini"
+        # Define the assistant definition
+        definition = await client.beta.assistants.retrieve(
+            "asst_3PzZuWqDfgCXAqqAtiZmLvdU"
         )
+
+        # Create the OpenAIAssistantAgent instance using the client and the assistant definition and the defined plugin
+        agent = OpenAIAssistantAgent(
+            client=client,
+            definition=definition,
+            plugins=[shadow_plugin],
+        )
+
         if agent is None:
             logger.error(
                 "Failed to retrieve the assistant agent. Please check the assistant ID."
@@ -129,14 +147,12 @@ async def event_stream(request: ShadowRequest) -> AsyncGenerator[str, None]:
     if threadId:
         current_thread_id = threadId
     else:
-        current_thread_id = (
-            await agent.create_thread()
-        )  # create new threadId and set as current
+        current_thread_id: AssistantAgentThread = None
 
     # Create the user message content with the request.query
-    message_user = ChatMessageContent(role=AuthorRole.USER, content=combined_query)
+    # message_user = ChatMessageContent(role=AuthorRole.USER, content=combined_query)
     # Add the user message to the agent
-    await agent.add_chat_message(thread_id=current_thread_id, message=message_user)
+    # await agent.add_chat_message(thread_id=current_thread_id, message=message_user)
     # get any additional instructions passed for the assistant
     additional_instructions = (
         f"<additional_instructions>{request.additional_instructions}</additional_instructions>"
@@ -145,83 +161,19 @@ async def event_stream(request: ShadowRequest) -> AsyncGenerator[str, None]:
     )
 
     try:
-        # Stage 1: Invoke stream on the agent
-        #first_chunk = True
+        first_chunk = True
+        async for response in agent.invoke_stream(
+            messages=combined_query,
+            thread_id=current_thread_id,
+            additional_instructions=additional_instructions,
+            on_intermediate_message=handle_streaming_intermediate_steps,
+        ):
 
-        # Stage 2: Send connection established message
-        #init_data = json.dumps(
-        #    {
-        #        "event": "connection_established",
-        #        "data": "Connection established, preparing to process query...",
-        #        "threadId": current_thread_id,
-        #        "stage": "init",
-        #    }
-        #)
-        #yield f"data: {init_data}\n\n"
-
-        # Force a small delay to ensure the init event is sent before processing
-        #await asyncio.sleep(0.05)
-
-        # Stage 2: Processing query - send immediately
-        #processing_data = json.dumps(
-        #    {
-        #        "event": "query_processing",
-        #        "data": "Processing query and preparing LLM request...",
-        #        "threadId": current_thread_id,
-        #        "stage": "processing",
-        #    }
-        #)
-        #yield f"data: {processing_data}\n\n"
-
-        # Force a small delay to ensure the processing event is sent before LLM call
-        #await asyncio.sleep(0.05)
-
-        # Stage 3: Invoke stream on the agent (after initial yields)
-        result = agent.invoke_stream(
-            thread_id=current_thread_id, additional_instructions=additional_instructions
-        )
-        
-        async for partial_content in result:
-            # Skip empty content
-            if not partial_content.content.strip():
-                continue
-
-            # Send first chunk event
-            #if first_chunk:
-            #    first_chunk_data = json.dumps(
-            #        {
-            #            "event": "first_chunk_received",
-            #            "data": "First response chunk received, starting stream...",
-            #            "threadId": current_thread_id,
-            #            "stage": "streaming",
-            #        }
-            #    )
-            #    yield f"data: {first_chunk_data}\n\n"
-            #    first_chunk = False
-
-            # Prepare the data for streaming
-            data = json.dumps(
-                {
-                    "event": "content_chunk",
-                    "data": partial_content.content,
-                    "threadId": current_thread_id,
-                    "stage": "streaming",
-                }
-            )
-
-            # Stream to the caller
-            yield f"data: {data}\n\n"
-
-        # Stage 5: Stream completion
-        #completion_data = json.dumps(
-        #    {
-        #        "event": "stream_completed",
-        #        "data": "Stream processing completed successfully.",
-        #        "threadId": current_thread_id,
-        #        "stage": "completed",
-        #    }
-        #)
-        #yield f"data: {completion_data}\n\n"
+            if first_chunk:
+                print(f"# {response.name}: ", end="", flush=True)
+                first_chunk = False
+            print(response.content, end="", flush=True)
+        print()
 
     except HTTPException as exc:
         # SSE error payload

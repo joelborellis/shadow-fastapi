@@ -76,7 +76,7 @@ class SearchCustomer:
             )
             if not r:
                 return "No results found."
-            results = [f"{doc['title']}:  {doc['chunk']}" for doc in r]
+            results = [f"{doc['title']}:  {clean_text(doc['chunk'])}" for doc in r]
 
             return "\n".join(results)
         except Exception as e:
