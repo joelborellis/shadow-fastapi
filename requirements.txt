@@ -2,10 +2,10 @@
 # The Python Worker is managed by Azure Functions platform
 # Manually managing azure-functions-worker may cause unexpected issues
 
-azure-functions>=1.21.3
+azure-functions>=1.22.1
 fastapi
 openai
-semantic-kernel==1.21.3
+semantic-kernel==1.35.0
 azure-search-documents==11.6.0b4
 azure-ai-ml
 azure.ai.projects
